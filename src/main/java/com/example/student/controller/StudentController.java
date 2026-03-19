@@ -14,32 +14,79 @@ public class StudentController {
     private List<Student> students = new ArrayList<>();
 
     @GetMapping("/welcome")
-    public String welcome(@RequestParam String name) {
-        return "Welcome " + name;
+    public ResponseEntity<String> welcome(
+            @RequestParam(required = false) String name) {
+
+        if (name == null || name.isBlank()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Paramètre 'name' manquant");
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .header("Content-Type", "text/plain")
+                .body("Welcome " + name);
     }
 
     @PostMapping("/students")
-    public List<String> addStudents(@RequestBody List<Student> newStudents) {
-        students.addAll(newStudents);
-        return students.stream()
-                .map(s -> s.getFirstName() + " " + s.getLastName())
-                .collect(Collectors.toList());
+    public ResponseEntity<?> addStudents(
+            @RequestBody List<Student> newStudents) {
+
+        try {
+            students.addAll(newStudents);
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .header("Content-Type", "application/json")
+                    .body(students);
+
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur serveur : " + e.getMessage());
+        }
     }
 
     @GetMapping("/students")
-    public ResponseEntity<String> getStudents(
-            @RequestHeader(value = "Accept", defaultValue = "text/plain") String accept) {
+    public ResponseEntity<?> getStudents(
+            @RequestHeader(value = "Accept", required = false) String accept) {
 
-        if (accept.equals("text/plain")) {
-            String result = students.stream()
-                    .map(s -> s.getFirstName() + " " + s.getLastName())
-                    .collect(Collectors.joining(", "));
-            return ResponseEntity.ok()
-                    .header("Content-Type", "text/plain")
-                    .body(result);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                    .body("Format non supporté");
+        if (accept == null || accept.isBlank()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Header 'Accept' manquant");
+        }
+
+        try {
+            if (accept.equals("text/plain")) {
+
+                String result = students.stream()
+                        .map(s -> s.getFirstName() + " " + s.getLastName())
+                        .collect(Collectors.joining(", "));
+
+                return ResponseEntity
+                        .status(HttpStatus.OK)
+                        .header("Content-Type", "text/plain")
+                        .body(result);
+
+            } else if (accept.equals("application/json")) {
+
+                return ResponseEntity
+                        .status(HttpStatus.OK)
+                        .header("Content-Type", "application/json")
+                        .body(students);
+
+            } else {
+                return ResponseEntity
+                        .status(HttpStatus.NOT_IMPLEMENTED)
+                        .body("Format non supporté");
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur serveur : " + e.getMessage());
         }
     }
 }
